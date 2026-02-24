@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AMIS² – Questions</title>
+  <style>
+    body { font-family: -apple-system, system-ui, Arial; margin: 0; background:#f6f6f6; }
+    header { padding: 16px 16px 8px; }
+    h1 { margin: 0; font-size: 20px; }
+    .sub { color:#666; margin-top:6px; font-size: 13px; }
+    .wrap { padding: 12px 16px 24px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .card {
+      background: white; border-radius: 14px; padding: 14px 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.06);
+      border: 1px solid rgba(0,0,0,.06);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .card.done { opacity:.55; }
+    .title { font-weight: 700; font-size: 15px; }
+    .hint { font-size: 12px; color:#666; margin-top:4px; }
+    .pill { font-size: 12px; padding: 6px 10px; border-radius: 999px; background:#eee; }
+    .pill.done { background:#dff7df; }
+    button {
+      border: 0; background: #111; color: #fff; padding: 10px 12px;
+      border-radius: 12px; font-weight: 700;
+    }
+    button.secondary { background: #e9e9e9; color:#111; }
+    .row { display:flex; gap:10px; margin-top: 12px; }
+    /* Detail view */
+    .detail { display:none; padding: 18px 16px 28px; }
+    .qbox {
+      background:white; border-radius: 16px; padding: 16px;
+      box-shadow: 0 8px 22px rgba(0,0,0,.08);
+      border: 1px solid rgba(0,0,0,.06);
+    }
+    .qko { font-size: 16px; font-weight: 800; margin: 0 0 10px; }
+    .qfr { font-size: 15px; margin: 0; color:#222; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 12px; }
+    .back { background:#e9e9e9; color:#111; }
+    .small { font-size: 12px; color:#666; }
+  </style>
+</head>
+<body>
+  <header id="homeHeader">
+    <h1>AMIS² – Questions</h1>
+    <div class="sub">Clique une carte ➜ lis ➜ reviens ➜ la carte devient “faite”.</div>
+    <div class="row">
+      <button class="secondary" id="resetBtn">Réinitialiser</button>
+    </div>
+  </header>
+
+  <div class="wrap" id="home">
+    <div class="grid" id="list"></div>
+  </div>
+
+  <div class="detail" id="detail">
+    <div class="topbar">
+      <button class="back" id="backBtn">← Retour</button>
+      <div class="small" id="progress"></div>
+    </div>
+    <div class="qbox">
+      <p class="qko" id="qko"></p>
+      <p class="qfr" id="qfr"></p>
+    </div>
+    <div class="row">
+      <button id="doneBtn">Marquer comme fait ✓</button>
+      <button class="secondary" id="skipBtn">Autre question ↻</button>
+    </div>
+  </div>
+
+<script>
+  // ✅ 여기 질문만 추가/수정하면 돼.
+  const QUESTIONS = [
+    { ko: "내가 한국어/불어를 배우고 있는 이유는?", fr: "Pourquoi est-ce que tu apprends le coréen / le français ?" },
+    { ko: "혼자 여행 vs 친구와 여행", fr: "Voyager seul(e) ou avec des amis ?" },
+    { ko: "안정적인 직업 vs 도전적인 인생", fr: "Un travail stable ou une vie pleine de défis ?" },
+    { ko: "프랑스에서 느낀 가장 큰 변화는?", fr: "Quel est le plus grand changement depuis que tu es en France ?" },
+    { ko: "나의 강점은?", fr: "Quelle est ta plus grande force ?" }
+  ];
+
+  const KEY = "amis2_done_ids_v1";
+  const getDone = () => new Set(JSON.parse(localStorage.getItem(KEY) || "[]"));
+  const setDone = (set) => localStorage.setItem(KEY, JSON.stringify([...set]));
+
+  let done = getDone();
+  let currentId = null;
+
+  const listEl = document.getElementById("list");
+  const homeEl = document.getElementById("home");
+  const detailEl = document.getElementById("detail");
+  const qkoEl = document.getElementById("qko");
+  const qfrEl = document.getElementById("qfr");
+  const progressEl = document.getElementById("progress");
+
+  function renderList() {
+    listEl.innerHTML = "";
+    QUESTIONS.forEach((q, i) => {
+      const card = document.createElement("div");
+      card.className = "card" + (done.has(i) ? " done" : "");
+      card.innerHTML = `
+        <div>
+          <div class="title">Carte ${i+1}</div>
+          <div class="hint">${done.has(i) ? "Déjà fait" : "Clique pour découvrir"}</div>
+        </div>
+        <div class="pill ${done.has(i) ? "done" : ""}">${done.has(i) ? "✓" : "?"}</div>
+      `;
+      card.onclick = () => openDetail(i);
+      listEl.appendChild(card);
+    });
+    const d = done.size, total = QUESTIONS.length;
+    document.querySelector(".sub").textContent = `Progression: ${d}/${total} cartes faites.`;
+  }
+
+  function openDetail(id) {
+    currentId = id;
+    qkoEl.textContent = QUESTIONS[id].ko;
+    qfrEl.textContent = QUESTIONS[id].fr;
+    progressEl.textContent = `Carte ${id+1} / ${QUESTIONS.length}`;
+    homeEl.style.display = "none";
+    document.getElementById("homeHeader").style.display = "none";
+    detailEl.style.display = "block";
+  }
+
+  function goHome() {
+    detailEl.style.display = "none";
+    homeEl.style.display = "block";
+    document.getElementById("homeHeader").style.display = "block";
+    renderList();
+  }
+
+  document.getElementById("backBtn").onclick = () => goHome();
+
+  document.getElementById("doneBtn").onclick = () => {
+    if (currentId !== null) {
+      done.add(currentId);
+      setDone(done);
+    }
+    goHome();
+  };
+
+  document.getElementById("skipBtn").onclick = () => {
+    // 아직 안 한 것 중 랜덤
+    const remaining = QUESTIONS.map((_, i) => i).filter(i => !done.has(i));
+    const pick = remaining.length ? remaining[Math.floor(Math.random()*remaining.length)] : Math.floor(Math.random()*QUESTIONS.length);
+    openDetail(pick);
+  };
+
+  document.getElementById("resetBtn").onclick = () => {
+    if (confirm("오늘 진행 상태를 초기화할까요?")) {
+      done = new Set();
+      setDone(done);
+      renderList();
+    }
+  };
+
+  renderList();
+</script>
+</body>
+</html>
